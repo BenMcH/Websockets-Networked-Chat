@@ -46,10 +46,14 @@ class ChatServer(object):
 
     def remove_client(self, client_id):
         if client_id in self.clients:
-            self.broadcast(0, "{0} has left the chat.".format(self.name(client_id)))
+            name = self.name(client_id)
             del self.clients[client_id]
+            self.broadcast(0, "{0} has left the chat.".format(self.name(client_id)))
 
-    def broadcast(self, sender_id, message):
+
+    def broadcast(self, sender_id, message, ignore = None):
+        print(ignore)
+        print(message)
         msg = "{0}: {1}".format(self.name(sender_id), message)
         for client in self.clients.values():
             client.write_message(msg)
