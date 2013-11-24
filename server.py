@@ -51,9 +51,7 @@ class ChatServer(object):
             self.broadcast(0, "{0} has left the chat.".format(self.name(client_id)))
 
 
-    def broadcast(self, sender_id, message, ignore = None):
-        print(ignore)
-        print(message)
+    def broadcast(self, sender_id, message):
         msg = "{0}: {1}".format(self.name(sender_id), message)
         for client in self.clients.values():
             client.write_message(msg)
@@ -62,17 +60,25 @@ class ChatServer(object):
 server = ChatServer()
 
 class WSEchoHandler(ws.WebSocketHandler):
-
+    
     def open(self):
         self.client_id = server.add_client(self)
-        self.write_message("connected.")
 
     def on_message(self, message):
-        server.broadcast(self.client_id, message)
+        """
+        Safegaurd to disallow xss and html injection.
+        """
+        message=message.replace('&','&amp;');
+        message=message.replace('>','&gt;');
+        message=message.replace('<','&lt;');
+        message=message.replace('"','&quot;');
+        message=message.replace("'","&#x27");
+        if(not bool(not message or message.isspace())):
+            server.broadcast(self.client_id, message)
 
     def on_close(self):
         server.remove_client(self.client_id)
-
+    
 def echo_test_wsgi(env, start):
     status = "200 OK"
     response_headers = [("Content-type", "text/html")]
