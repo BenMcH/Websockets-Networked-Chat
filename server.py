@@ -4,6 +4,7 @@ import tornado.websocket as ws
 import tornado.ioloop
 import tornado.wsgi
 import tornado.web
+import time
 
 class ChatServer(object):
     """
@@ -63,8 +64,20 @@ class WSEchoHandler(ws.WebSocketHandler):
     
     def open(self):
         self.client_id = server.add_client(self)
-
+        self.time = int(round(time.time()*1000))
+        self.spam_msg = int(round(time.time()*1000))
     def on_message(self, message):
+        """
+        This block of if statements checks for spam an disallows the input to be broadcast.
+        It will also send a message to the user to not spam.
+        """
+        if int(round(time.time()*1000))-self.time < 300:
+            self.time=int(round(time.time()*1000))
+            if int(round(time.time()*1000))-self.spam_msg > 250:
+                self.write_message("Server: <font color=\"red\">Please do not spam</font>")
+                self.spam_msg=int(round(time.time()*1000))
+            return None
+        self.time=int(round(time.time()*1000))
         """
         Safegaurd to disallow xss and html injection.
         """
