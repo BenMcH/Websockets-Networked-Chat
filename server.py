@@ -5,6 +5,7 @@ import tornado.ioloop
 import tornado.wsgi
 import tornado.web
 import time
+import re
 
 class ChatServer(object):
     """
@@ -13,6 +14,7 @@ class ChatServer(object):
     def __init__(self):
         self.clients = {}
         self.next_id = 1
+        self.pattern = re.compile("^user[\d]*", re.IGNORECASE)
 
     def name(self, client_id):
         if client_id == 0:
@@ -60,12 +62,17 @@ class ChatServer(object):
         print(msg)
 
     def change_name(self, client_id, new_name):
+        if self.pattern.match("".join(new_name.split())):
+            self.clients[client_id].write_message("Server: This username is following an incorrect format for custom names.")
+            return None
         for client in self.clients:
             if self.name(client) == new_name:
                 self.clients[client_id].write_message("Server: This name is already taken")
                 return None
         self.broadcast(0, "{0} has been renamed to {1}.".format(self.name(client_id),new_name))
         self.clients[client_id].name=new_name
+
+    
       
 server = ChatServer()
 
@@ -106,8 +113,7 @@ class WSEchoHandler(ws.WebSocketHandler):
         name = self.name
         server.remove_client(self.client_id)
         server.broadcast(0, "{0} has left the chat".format(self.name))
-       # server.remove_client(self.client_id)
-    
+          
 application = tornado.web.Application([
     (r'/', WSEchoHandler),
 ])
