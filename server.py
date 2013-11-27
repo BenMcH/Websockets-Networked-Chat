@@ -45,7 +45,7 @@ class ChatServer(object):
         try:
             msg = ('client {0} has connected as {1}'
                    .format(client_id, self.name(client_id)))
-            self.broadcast(0, msg)
+            self.broadcast(0, msg, self.clients[client_id].room)
         except Exception as e:
             print('ERROR: ', e)
         return client_id
@@ -55,10 +55,16 @@ class ChatServer(object):
             name = self.name(client_id)
             del self.clients[client_id]
 
-    def broadcast(self, sender_id, message):
+    def broadcast(self, sender_id, message, topic = "all"):
+        if topic == "all":
+            try:
+                topic = self.clients[sender_id].room
+            except:
+                topic = "all"
         msg = "{0}: {1}".format(self.name(sender_id), message)
         for client in self.clients.values():
-            client.write_message(msg)
+            if client.room == topic:
+                client.write_message(msg)
         print(msg)
 
     def change_name(self, client_id, new_name):
@@ -79,6 +85,7 @@ server = ChatServer()
 class WSEchoHandler(ws.WebSocketHandler):
     
     def open(self):
+        self.room = "CrystalChat"
         self.client_id = server.add_client(self)
         self.name="User{0}".format(self.client_id)
         self.time = int(round(time.time()*1000))
@@ -98,6 +105,13 @@ class WSEchoHandler(ws.WebSocketHandler):
         if message.startswith("/name"):
             server.change_name(self.client_id, message.split(" ",1)[1])
             return None
+        if message.startswith("/topic"):
+            if self.room != "all":
+                server.broadcast(0,"{0} has left the topic".format(self.name), self.room)
+            self.room = message.split(" ",1)[1]
+            server.broadcast(0,"{0} has joined the topic".format(self.name), self.room)
+            return None
+
         """
         Safegaurd to disallow xss and html injection.
         """
@@ -110,9 +124,8 @@ class WSEchoHandler(ws.WebSocketHandler):
             server.broadcast(self.client_id, message)
 
     def on_close(self):
-        name = self.name
         server.remove_client(self.client_id)
-        server.broadcast(0, "{0} has left the chat".format(self.name))
+        server.broadcast(0, "{0} has left the chat".format(self.name), self.room)
           
 application = tornado.web.Application([
     (r'/', WSEchoHandler),
