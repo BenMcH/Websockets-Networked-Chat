@@ -75,7 +75,7 @@ class ChatServer(object):
             if self.name(client) == new_name:
                 self.clients[client_id].write_message("Server: This name is already taken")
                 return None
-        self.broadcast(0, "{0} has been renamed to {1}.".format(self.name(client_id),new_name))
+        self.broadcast(0, "{0} has been renamed to {1}.".format(self.name(client_id),new_name), self.clients[client_id].room)
         self.clients[client_id].name=new_name
 
     
